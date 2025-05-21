@@ -127,17 +127,12 @@ if (!is.null(libdir) && libdir != "None"){
 ## load seqinfo 
 #seqinfo <- getSeqInfo(genomeBuild, genomeStyle)
 # seqinfo <- getSeqInfo(genomeBuild, genomeStyle)
-script_dir <- dirname(normalizePath(sys.frame(1)$ofile))  # path to runIchorCNA.R
-rds_path <- file.path(script_dir, "..", "inst", "extdata", paste0("seqinfo_", genomeBuild, "_", tolower(genomeStyle), ".rds"))
-
-if (file.exists(rds_path)) {
-  message("Loading pre-saved seqinfo: ", rds_path)
-  seqinfo <- readRDS(rds_path)
-} else {
-  stop("Expected seqinfo RDS not found: ", rds_path)
+if (genomeBuild == "hg19" &  genomeStyle == "UCSC") {
+  seqinfo <- readRDS("/home/seqinfo_hg19_ucsc.rds")
 }
-
-
+if (genomeBuild == "hg38" &  genomeStyle == "NCBI") {
+  seqinfo <- readRDS("~/seqinfo_hg38_ncbi.rds")
+}
 if (substr(tumour_file,nchar(tumour_file)-2,nchar(tumour_file)) == "wig") {
   wigFiles <- data.frame(cbind(patientID, tumour_file))
 } else {
