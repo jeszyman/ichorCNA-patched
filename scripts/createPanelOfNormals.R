@@ -1,7 +1,6 @@
 library(HMMcopy)
 library(GenomicRanges)
 library(optparse)
-library(ichorCNA)
 
 options(stringsAsFactors=FALSE, scipen=0)
 options(bitmapType='cairo')
@@ -17,8 +16,8 @@ option_list <- list(
 	make_option(c("--chrNormalize"), type="character", default="c(1:22)", help = "Specify chromosomes to normalize GC/mappability biases"),
 	make_option(c("--maleChrXLogRThres"), type="numeric", default=-0.80, help = "ChrX Log ratio threshold to confirm as male gender."),
 	make_option(c("-e", "--exons.bed"), type = "character", default=NULL, help = "Path to bed file containing exon regions."),
-	make_option(c("--method"), type = "character", default="median", help="Median or Mean.")
-	#make_option(c("--ylim"), type = "character", default="c(-2,2)", help="Y-limits for plotting of mean/median log ratios")
+	make_option(c("--method"), type = "character", default="median", help="Median or Mean."),
+        make_option(c("--libdir"), type = "character", default=NULL, help = "Script library path. Usually exclude this argument unless custom modifications have been made to the ichorCNA R package code and the user would like to source those R files. Default: [%default]")
 )
 parseobj <- OptionParser(option_list=option_list)
 opt <- parse_args(parseobj)
@@ -36,7 +35,7 @@ genomeStyle <- opt$genomeStyle
 #ylim <- eval(parse(text = opt$ylim))
 maleChrXLogRThres <- opt$maleChrXLogRThres
 chrs <- as.character(eval(parse(text = opt$chrs)))
-chrNormalize <- as.character(eval(parse(text=opt$chrNormalize))); 
+chrNormalize <- as.character(eval(parse(text=opt$chrNormalize)));
 seqlevelsStyle(chrs) <- genomeStyle
 seqlevelsStyle(chrNormalize) <- genomeStyle
 
@@ -44,6 +43,19 @@ if (!is.null(centromere)){
 	centromere <- read.delim(centromere,header=T,stringsAsFactors=F,sep="\t")
 }
 seqlevelsStyle(centromere$Chr) <- genomeStyle
+
+libdir <- opt$libdir
+
+# Check if libdir is provided and source files directly
+if (exists("libdir") && !is.null(libdir) && libdir != "None") {
+    source(paste0(libdir, "/R/utils.R"))
+    source(paste0(libdir, "/R/segmentation.R"))
+    source(paste0(libdir, "/R/EM.R"))
+    source(paste0(libdir, "/R/output.R"))
+    source(paste0(libdir, "/R/plotting.R"))
+} else {
+    library(ichorCNA)
+}
 
 files <- read.delim(filelist, header = FALSE, stringsAsFactors=FALSE, sep ="\t")[, 1]
 
@@ -67,7 +79,7 @@ for (i in 1:length(files)){
 	} else {
 	  map <- wigToGRanges(mapWig)
 	}
-		
+
 	## FILTER BY EXONS IF PROVIDED ##
 	## add gc and map to RangedData object ##
 	if (!is.null(exons.bed)){
@@ -75,9 +87,9 @@ for (i in 1:length(files)){
 	}else{
 		targetedSequences <- NULL
 	}
-	normal_counts <- loadReadCountsFromWig(normal_reads, chrs=chrs, gc=gc, map=map, 
+	normal_counts <- loadReadCountsFromWig(normal_reads, chrs=chrs, gc=gc, map=map,
 					centromere=centromere, targetedSequences=targetedSequences)
-	
+
 	gender <- normal_counts$gender
 
 	### CORRECT TUMOUR DATA FOR GC CONTENT AND MAPPABILITY BIASES ###
@@ -89,13 +101,13 @@ for (i in 1:length(files)){
 	}else{
 		values(normalGR)[[sid]] <- normal_counts$counts$copy
 	}
-	
+
 	chrXMedian <- gender$chrXMedian
 	chrXStr <- grep("X", chrs, value = TRUE)
 	chrXInd <- as.character(seqnames(normalGR)) == chrXStr
 	## Normalize chrX ##
 	values(normalGR)[[sid]][chrXInd] <- values(normalGR)[[sid]][chrXInd] - chrXMedian
-	
+
 }
 
 
