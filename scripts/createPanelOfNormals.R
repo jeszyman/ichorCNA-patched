@@ -1,5 +1,6 @@
 library(HMMcopy)
 library(GenomicRanges)
+library(GenomeInfoDb)
 library(optparse)
 
 options(stringsAsFactors=FALSE, scipen=0)
